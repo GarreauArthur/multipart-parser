@@ -39,7 +39,6 @@ private:
 		LAST_BOUNDARY = 2
 	};
 	
-	std::string boundary;
 	const char *boundaryData;
 	size_t boundarySize;
 	bool boundaryIndex[256];
@@ -234,6 +233,7 @@ private:
 	}
 	
 public:
+	std::string boundary;
 	Callback onPartBegin;
 	Callback onHeaderField;
 	Callback onHeaderValue;
@@ -255,11 +255,28 @@ public:
 		resetCallbacks();
 		setBoundary(boundary);
 	}
-	
+/* 	
+	MultipartParser(MultipartParser const& mp) {
+		if ( mp.getlookbehind != NULL ) {
+			lookbehind = new char[mp.get]
+		}
+	boundaryData;
+	boundarySize;
+	bool boundaryIndex[256];
+	char *lookbehind;
+	size_t lookbehindSize;
+	State state;
+	int flags;
+	size_t index;
+	size_t headerFieldMark;
+	size_t headerValueMark;
+	size_t partDataMark;
+	const char *errorReason;
+	}
 	~MultipartParser() {
 		delete[] lookbehind;
 	}
-	
+*/	
 	void reset() {
 		delete[] lookbehind;
 		state = ERROR;
@@ -279,8 +296,10 @@ public:
 	void setBoundary(const std::string &boundary) {
 		reset();
 		//this->boundary = boundary;
-		this->boundary = "--" + boundary;
+		this->boundary = "\r\n--" + boundary;
+		std::cout << this->boundary << "setboundary" << std::endl;
 		boundaryData = this->boundary.c_str();
+		std::cout << this->boundary << "setboundary c_str" << std::endl;
 		boundarySize = this->boundary.size();
 		indexBoundary();
 		lookbehind = new char[boundarySize + 8];
@@ -301,7 +320,7 @@ public:
 		size_t boundaryEnd  = boundarySize - 1;
 		size_t i;
 		char c, cl;
-		
+		std::cout << boundary << "feed" << std::endl;
 		for (i = 0; i < len; i++) {
 			c = buffer[i];
 			
@@ -312,7 +331,6 @@ public:
 				index = 0;
 				state = START_BOUNDARY;
 			case START_BOUNDARY:
-				std::cout << c ;
 				if (index == boundarySize - 4) {
 					if (c != CR) {
 						setError("Malformed. Expected CR after boundary.");
