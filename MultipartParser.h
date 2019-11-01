@@ -5,10 +5,10 @@
 #include <string>
 #include <stdexcept>
 #include <cstring>
-
+#include <iostream>
 class MultipartParser {
 public:
-	typedef void (*Callback)(const char *buffer, size_t start, size_t end, void *userData);
+	typedef void (*Callback)(std::string_view buffer, size_t start, size_t end, void *userData);
 	
 private:
 	static const char CR     = 13;
@@ -76,28 +76,35 @@ private:
 		}
 	}
 	
-	void callback(Callback cb, const char *buffer = NULL, size_t start = UNMARKED,
+	void callback(Callback cb, std::string_view buffer = NULL, size_t start = UNMARKED,
 		size_t end = UNMARKED, bool allowEmpty = false)
 	{
+		std::cout << "BREAKPOINT 2.3.callback.1" << std::endl;
 		if (start != UNMARKED && start == end && !allowEmpty) {
+		std::cout << "BREAKPOINT 2.3.callback.2" << std::endl;
 			return;
 		}
 		if (cb != NULL) {
+			std::cout << "BREAKPOINT 2.3.callback.3" << std::endl;
 			cb(buffer, start, end, userData);
 		}
 	}
 	
-	void dataCallback(Callback cb, size_t &mark, const char *buffer, size_t i, size_t bufferLen,
+	void dataCallback(Callback cb, size_t &mark, std::string_view buffer, size_t i, size_t bufferLen,
 		bool clear, bool allowEmpty = false)
 	{
+		std::cout << "BREAKPOINT 2.3.1" << std::endl;
 		if (mark == UNMARKED) {
 			return;
 		}
 		
+		std::cout << "BREAKPOINT 2.3.2" << std::endl;
 		if (!clear) {
+			std::cout << "BREAKPOINT 2.3.3" << std::endl;
 			callback(cb, buffer, mark, bufferLen, allowEmpty);
 			mark = 0;
 		} else {
+			std::cout << "BREAKPOINT 2.3.4" << std::endl;
 			callback(cb, buffer, mark, i, allowEmpty);
 			mark = UNMARKED;
 		}
@@ -122,7 +129,7 @@ private:
 		errorReason = message;
 	}
 	
-	void processPartData(size_t &prevIndex, size_t &index, const char *buffer,
+	void processPartData(size_t &prevIndex, size_t &index, std::string_view buffer,
 		size_t len, size_t boundaryEnd, size_t &i, char c, State &state, int &flags)
 	{
 		prevIndex = index;
@@ -271,7 +278,8 @@ public:
 	
 	void setBoundary(const std::string &boundary) {
 		reset();
-		this->boundary = "\r\n--" + boundary;
+		//this->boundary = boundary;
+		this->boundary = "--" + boundary;
 		boundaryData = this->boundary.c_str();
 		boundarySize = this->boundary.size();
 		indexBoundary();
@@ -281,7 +289,7 @@ public:
 		errorReason = "No error.";
 	}
 	
-	size_t feed(const char *buffer, size_t len) {
+	size_t feed(std::string_view buffer, size_t len) {
 		if (state == ERROR || len == 0) {
 			return 0;
 		}
@@ -304,14 +312,15 @@ public:
 				index = 0;
 				state = START_BOUNDARY;
 			case START_BOUNDARY:
-				if (index == boundarySize - 2) {
+				std::cout << c ;
+				if (index == boundarySize - 4) {
 					if (c != CR) {
 						setError("Malformed. Expected CR after boundary.");
 						return i;
 					}
 					index++;
 					break;
-				} else if (index - 1 == boundarySize - 2) {
+				} else if (index == boundarySize - 3) {
 					if (c != LF) {
 						setError("Malformed. Expected LF after boundary CR.");
 						return i;
@@ -322,17 +331,23 @@ public:
 					break;
 				}
 				if (c != boundary[index + 2]) {
+					std::cout << "oijaeifj paoijepofgi japoeigjp aejpgoi japogiej aioejg  HERE" << std::endl;
+					std::cout << int(c) << " vs " << int(boundary[index+2]) << std::endl;
+					std::cout << c << " vs " << boundary[index+2] << std::endl;
 					setError("Malformed. Found different boundary data than the given one.");
 					return i;
 				}
 				index++;
 				break;
 			case HEADER_FIELD_START:
+				std::cout << "BREAKPOINT 1" << std::endl;
 				state = HEADER_FIELD;
 				headerFieldMark = i;
 				index = 0;
 			case HEADER_FIELD:
+				std::cout << "BREAKPOINT 2" << std::endl;
 				if (c == CR) {
+					std::cout << "BREAKPOINT 2.1" << std::endl;
 					headerFieldMark = UNMARKED;
 					state = HEADERS_ALMOST_DONE;
 					break;
@@ -340,10 +355,12 @@ public:
 
 				index++;
 				if (c == HYPHEN) {
+					std::cout << "BREAKPOINT 2.2" << std::endl;
 					break;
 				}
 
 				if (c == COLON) {
+					std::cout << "BREAKPOINT 2.3" << std::endl;
 					if (index == 1) {
 						// empty header field
 						setError("Malformed first header name character.");
@@ -354,6 +371,7 @@ public:
 					break;
 				}
 
+				std::cout << "BREAKPOINT 3" << std::endl;
 				cl = lower(c);
 				if (cl < 'a' || cl > 'z') {
 					setError("Malformed header name.");
@@ -361,6 +379,7 @@ public:
 				}
 				break;
 			case HEADER_VALUE_START:
+				std::cout << "BREAKPOINT 4" << std::endl;
 				if (c == SPACE) {
 					break;
 				}
@@ -368,6 +387,7 @@ public:
 				headerValueMark = i;
 				state = HEADER_VALUE;
 			case HEADER_VALUE:
+				std::cout << "BREAKPOINT 5" << std::endl;
 				if (c == CR) {
 					dataCallback(onHeaderValue, headerValueMark, buffer, i, len, true, true);
 					callback(onHeaderEnd);
@@ -375,6 +395,7 @@ public:
 				}
 				break;
 			case HEADER_VALUE_ALMOST_DONE:
+				std::cout << "BREAKPOINT 6" << std::endl;
 				if (c != LF) {
 					setError("Malformed header value: LF expected after CR");
 					return i;
@@ -383,6 +404,7 @@ public:
 				state = HEADER_FIELD_START;
 				break;
 			case HEADERS_ALMOST_DONE:
+				std::cout << "BREAKPOINT 7" << std::endl;
 				if (c != LF) {
 					setError("Malformed header ending: LF expected after CR");
 					return i;
@@ -392,9 +414,11 @@ public:
 				state = PART_DATA_START;
 				break;
 			case PART_DATA_START:
+				std::cout << "BREAKPOINT 8" << std::endl;
 				state = PART_DATA;
 				partDataMark = i;
 			case PART_DATA:
+				std::cout << "BREAKPOINT 9" << std::endl;
 				processPartData(prevIndex, index, buffer, len, boundaryEnd, i, c, state, flags);
 				break;
 			default:
@@ -402,8 +426,11 @@ public:
 			}
 		}
 		
+		std::cout << "BREAKPOINT 10" << std::endl;
 		dataCallback(onHeaderField, headerFieldMark, buffer, i, len, false);
+		std::cout << "BREAKPOINT 11" << std::endl;
 		dataCallback(onHeaderValue, headerValueMark, buffer, i, len, false);
+		std::cout << "BREAKPOINT 12" << std::endl;
 		dataCallback(onPartData, partDataMark, buffer, i, len, false);
 		
 		this->index = index;
