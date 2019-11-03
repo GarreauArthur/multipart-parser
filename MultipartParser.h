@@ -39,19 +39,6 @@ private:
 		LAST_BOUNDARY = 2
 	};
 	
-	const char *boundaryData;
-	size_t boundarySize;
-	bool boundaryIndex[256];
-	char *lookbehind;
-	size_t lookbehindSize;
-	State state;
-	int flags;
-	size_t index;
-	size_t headerFieldMark;
-	size_t headerValueMark;
-	size_t partDataMark;
-	const char *errorReason;
-	
 	void resetCallbacks() {
 		onPartBegin   = NULL;
 		onHeaderField = NULL;
@@ -243,6 +230,19 @@ public:
 	Callback onPartEnd;
 	Callback onEnd;
 	void *userData;
+	const char *boundaryData;
+	size_t boundarySize;
+	bool boundaryIndex[256];
+	char *lookbehind;
+	size_t lookbehindSize;
+	State state;
+	int flags;
+	size_t index;
+	size_t headerFieldMark;
+	size_t headerValueMark;
+	size_t partDataMark;
+	const char *errorReason;
+	
 	
 	MultipartParser() {
 		lookbehind = NULL;
@@ -254,6 +254,122 @@ public:
 		lookbehind = NULL;
 		resetCallbacks();
 		setBoundary(boundary);
+	}
+
+	// move assignement operator
+	MultipartParser& operator=(MultipartParser&& old) {
+
+		if ( this == &old )
+			return *this;
+
+		onPartBegin = old.onPartBegin;
+		onHeaderField = old.onHeaderField;
+		onHeaderValue = old.onHeaderValue;
+		onHeaderEnd = old.onHeaderEnd;
+		onHeadersEnd = old.onHeadersEnd;
+		onPartData = old.onPartData;
+		onPartEnd = old.onPartEnd;
+		onEnd = old.onEnd;
+	  boundary = old.boundary;
+		boundarySize = old.boundarySize;
+		
+		lookbehindSize = old.lookbehindSize;
+		state = old.state;
+		flags = old.flags;
+		index = old.index;
+		headerFieldMark = old.headerFieldMark;
+		headerValueMark = old.headerValueMark;
+		partDataMark = old.partDataMark;
+
+		std::copy_n(old.boundaryIndex, 256, boundaryIndex);
+		errorReason = std::move(old.errorReason);
+		boundaryData = std::move(old.boundaryData);
+		lookbehind = std::move(old.lookbehind);
+
+		// invalidate old
+		//old.boundary = NULL;
+		old.onPartBegin = nullptr;
+		old.onHeaderField = nullptr;
+		old.onHeaderValue = nullptr;
+		old.onHeaderEnd = nullptr;
+		old.onHeadersEnd = nullptr;
+		old.onPartData = nullptr;
+		old.onPartEnd = nullptr;
+		old.onEnd = nullptr;
+		old.userData = nullptr;
+		old.boundaryData = nullptr;
+		old.boundarySize = NULL;
+		//old.boundaryIndex = nullptr;
+		if ( lookbehind != nullptr ) {
+			delete[] lookbehind;
+			lookbehind = nullptr;
+		}
+		old.lookbehindSize = NULL;
+		//old.state = NULL;
+		old.flags = NULL;
+		old.index = NULL;
+		old.headerFieldMark = NULL;
+		old.headerValueMark = NULL;
+		old.partDataMark = NULL;
+		old.errorReason = nullptr;
+		return *this;
+
+	}
+	// TODO move constructor
+
+	MultipartParser(MultipartParser&& old) {
+
+		onPartBegin = old.onPartBegin;
+		onHeaderField = old.onHeaderField;
+		onHeaderValue = old.onHeaderValue;
+		onHeaderEnd = old.onHeaderEnd;
+		onHeadersEnd = old.onHeadersEnd;
+		onPartData = old.onPartData;
+		onPartEnd = old.onPartEnd;
+		onEnd = old.onEnd;
+	  boundary = old.boundary;
+		boundarySize = old.boundarySize;
+		
+		lookbehindSize = old.lookbehindSize;
+		state = old.state;
+		flags = old.flags;
+		index = old.index;
+		headerFieldMark = old.headerFieldMark;
+		headerValueMark = old.headerValueMark;
+		partDataMark = old.partDataMark;
+
+		std::copy_n(old.boundaryIndex, 256, boundaryIndex);
+		errorReason = std::move(old.errorReason);
+		boundaryData = std::move(old.boundaryData);
+		lookbehind = std::move(old.lookbehind);
+
+		// invalidate old
+		//old.boundary = NULL;
+		old.onPartBegin = nullptr;
+		old.onHeaderField = nullptr;
+		old.onHeaderValue = nullptr;
+		old.onHeaderEnd = nullptr;
+		old.onHeadersEnd = nullptr;
+		old.onPartData = nullptr;
+		old.onPartEnd = nullptr;
+		old.onEnd = nullptr;
+		old.userData = nullptr;
+		old.boundaryData = nullptr;
+		old.boundarySize = NULL;
+		//old.boundaryIndex = nullptr;
+		if ( lookbehind != nullptr ) {
+			delete[] lookbehind;
+			lookbehind = nullptr;
+		}
+		old.lookbehindSize = NULL;
+		//old.state = NULL;
+		old.flags = NULL;
+		old.index = NULL;
+		old.headerFieldMark = NULL;
+		old.headerValueMark = NULL;
+		old.partDataMark = NULL;
+		old.errorReason = nullptr;
+
 	}
 /* 	
 	MultipartParser(MultipartParser const& mp) {
@@ -273,10 +389,15 @@ public:
 	size_t partDataMark;
 	const char *errorReason;
 	}
+	*/
 	~MultipartParser() {
-		delete[] lookbehind;
+		std::cout << "DESTROYED" << std::endl;
+		if ( lookbehind != nullptr ) {
+			delete[] lookbehind;
+			lookbehind = nullptr;
+		}
 	}
-*/	
+	
 	void reset() {
 		delete[] lookbehind;
 		state = ERROR;
@@ -474,5 +595,6 @@ public:
 		return errorReason;
 	}
 };
+
 
 #endif /* _MULTIPART_PARSER_H_ */
