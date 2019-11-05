@@ -92,7 +92,9 @@ private:
 		} else {
 			std::cout << "BREAKPOINT 2.3.4" << std::endl;
 			callback(cb, buffer, mark, i, allowEmpty);
+			std::cout << "BREAKPOINT 2.3.4.1" << std::endl;
 			mark = UNMARKED;
+			std::cout << "BREAKPOINT 2.3.4.2" << std::endl;
 		}
 	}
 	
@@ -118,10 +120,12 @@ private:
 	void processPartData(size_t &prevIndex, size_t &index, std::string_view buffer,
 		size_t len, size_t boundaryEnd, size_t &i, char c, State &state, int &flags)
 	{
+		std::cout << "BREAK processPartData" << std::endl;
 		prevIndex = index;
 		
 		if (index == 0) {
 			// boyer-moore derived algorithm to safely skip non-boundary data
+			std::cout << "BREAK ppd 1" << std::endl;
 			while (i + boundarySize <= len) {
 				if (isBoundaryChar(buffer[i + boundaryEnd])) {
 					break;
@@ -136,6 +140,7 @@ private:
 		}
 		
 		if (index < boundarySize) {
+			std::cout << "BREAK ppd 2" << std::endl;
 			if (boundary[index] == c) {
 				if (index == 0) {
 					dataCallback(onPartData, partDataMark, buffer, i, len, true);
@@ -145,6 +150,7 @@ private:
 				index = 0;
 			}
 		} else if (index == boundarySize) {
+			std::cout << "BREAK ppd 3" << std::endl;
 			index++;
 			if (c == CR) {
 				// CR = part boundary
@@ -156,6 +162,7 @@ private:
 				index = 0;
 			}
 		} else if (index - 1 == boundarySize) {
+			std::cout << "BREAK ppd 4" << std::endl;
 			if (flags & PART_BOUNDARY) {
 				index = 0;
 				if (c == LF) {
@@ -178,12 +185,14 @@ private:
 				index = 0;
 			}
 		} else if (index - 2 == boundarySize) {
+			std::cout << "BREAK ppd 5" << std::endl;
 			if (c == CR) {
 				index++;
 			} else {
 				index = 0;
 			}
 		} else if (index - boundarySize == 3) {
+			std::cout << "BREAK ppd 6" << std::endl;
 			index = 0;
 			if (c == LF) {
 				callback(onPartEnd);
@@ -194,6 +203,7 @@ private:
 		}
 		
 		if (index > 0) {
+			std::cout << "BREAK ppd 7" << std::endl;
 			// when matching a possible boundary, keep a lookbehind reference
 			// in case it turns out to be a false lead
 			if (index - 1 >= lookbehindSize) {
@@ -205,8 +215,11 @@ private:
 					"Please send bug report with input file attached.");
 				throw std::out_of_range("index underflows lookbehind buffer");
 			}
+			std::cout << "BREAK ppd 7.1" << std::endl;
 			lookbehind[index - 1] = c;
+			std::cout << "BREAK ppd 7.2" << std::endl;
 		} else if (prevIndex > 0) {
+			std::cout << "BREAK ppd 8" << std::endl;
 			// if our boundary turned out to be rubbish, the captured lookbehind
 			// belongs to partData
 			callback(onPartData, lookbehind, 0, prevIndex);
@@ -270,7 +283,7 @@ public:
 		onPartData = old.onPartData;
 		onPartEnd = old.onPartEnd;
 		onEnd = old.onEnd;
-	  boundary = old.boundary;
+	  	boundary = old.boundary;
 		boundarySize = old.boundarySize;
 		
 		lookbehindSize = old.lookbehindSize;
@@ -284,7 +297,7 @@ public:
 		std::copy_n(old.boundaryIndex, 256, boundaryIndex);
 		errorReason = std::move(old.errorReason);
 		boundaryData = std::move(old.boundaryData);
-		lookbehind = std::move(old.lookbehind);
+		lookbehind = old.lookbehind;
 
 		// invalidate old
 		//old.boundary = NULL;
@@ -300,10 +313,7 @@ public:
 		old.boundaryData = nullptr;
 		old.boundarySize = NULL;
 		//old.boundaryIndex = nullptr;
-		if ( lookbehind != nullptr ) {
-			delete[] lookbehind;
-			lookbehind = nullptr;
-		}
+		old.lookbehind = nullptr;
 		old.lookbehindSize = NULL;
 		//old.state = NULL;
 		old.flags = NULL;
@@ -319,6 +329,7 @@ public:
 
 	MultipartParser(MultipartParser&& old) {
 
+		std::cout << "move constructor" << std::endl;
 		onPartBegin = old.onPartBegin;
 		onHeaderField = old.onHeaderField;
 		onHeaderValue = old.onHeaderValue;
@@ -327,7 +338,7 @@ public:
 		onPartData = old.onPartData;
 		onPartEnd = old.onPartEnd;
 		onEnd = old.onEnd;
-	  boundary = old.boundary;
+	        boundary = old.boundary;
 		boundarySize = old.boundarySize;
 		
 		lookbehindSize = old.lookbehindSize;
@@ -341,7 +352,7 @@ public:
 		std::copy_n(old.boundaryIndex, 256, boundaryIndex);
 		errorReason = std::move(old.errorReason);
 		boundaryData = std::move(old.boundaryData);
-		lookbehind = std::move(old.lookbehind);
+		lookbehind = old.lookbehind;
 
 		// invalidate old
 		//old.boundary = NULL;
@@ -357,10 +368,7 @@ public:
 		old.boundaryData = nullptr;
 		old.boundarySize = NULL;
 		//old.boundaryIndex = nullptr;
-		if ( lookbehind != nullptr ) {
-			delete[] lookbehind;
-			lookbehind = nullptr;
-		}
+		old.lookbehind = nullptr;
 		old.lookbehindSize = NULL;
 		//old.state = NULL;
 		old.flags = NULL;
