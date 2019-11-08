@@ -1,3 +1,60 @@
+# Multipart-form data
+
+Fork of [todo](todo).
+fix a lot of things, try to make it way better.
+
+## TODO
+
+* [ ] analyser et commenter processPartData
+* [ ] améliorer, moderniser
+* [ ] write better readme
+
+## Multipart/form-data
+
+Multipart/form-data is a content-type. The content-type http entity header is
+used to indicate the media type of the resource. In the case of multipart/form-data
+content-type also indicate a boundary:
+
+    content-type:multipart/form-data; boundary=BOUNDARY
+
+The boundary directive is required, made of 1 to 70 characters. It is used to
+encapsulate the boundaries of the multiple **parts** of the message. The parts'
+boundaries are prepended with `--`, the final boundary is suffixed with `--`.
+
+Line breaks are represented as "CR LF" (`\r\n`) pairs.
+
+Each **part** is expected to contain:
+
+* a "Content-disposition" header whose valude is "form-data"
+* a name attribute
+
+Ex:
+
+    Content-Disposition: form-data; name="mycontrol"
+
+Example:
+
+    Content-Type: multipart/form-data; boundary=AaB03x
+
+    --AaB03x
+    Content-Disposition: form-data; name="submit-name"
+
+    Larry
+    --AaB03x
+    Content-Disposition: form-data; name="files"; filename="file1.txt"
+    Content-Type: text/plain
+
+    ... contents of file1.txt ...
+    --AaB03x--
+
+## sauce
+
+* <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>
+* <https://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2>
+
+
+--------------------------------------------------------------------------------
+
 What is it?
 ===========
 An simple, efficient parser for multipart MIME messages, based on

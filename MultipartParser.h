@@ -6,8 +6,13 @@
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
+
+#define LOG(x) std::cout << x << std::endl;
+//#define LOG(x) ;
+
 class MultipartParser {
 public:
+	// typedef Callback to define our callbacks
 	typedef void (*Callback)(std::string_view buffer, size_t start, size_t end, void *userData);
 	
 private:
@@ -51,6 +56,9 @@ private:
 		userData      = NULL;
 	}
 	
+	/**
+	 * Used to implement the Boyer-moore algo, substring search (boundary)
+	 */
 	void indexBoundary() {
 		const char *current;
 		const char *end = boundaryData + boundarySize;
@@ -62,39 +70,40 @@ private:
 		}
 	}
 	
-	void callback(Callback cb, std::string_view buffer = NULL, size_t start = UNMARKED,
+	void callback(Callback callback, std::string_view buffer = NULL, size_t start = UNMARKED,
 		size_t end = UNMARKED, bool allowEmpty = false)
 	{
-		std::cout << "BREAKPOINT 2.3.callback.1" << std::endl;
+		LOG("BREAKPOINT 2.3.callback.1")
 		if (start != UNMARKED && start == end && !allowEmpty) {
-		std::cout << "BREAKPOINT 2.3.callback.2" << std::endl;
+		LOG("BREAKPOINT 2.3.callback.2")
 			return;
 		}
-		if (cb != NULL) {
-			std::cout << "BREAKPOINT 2.3.callback.3" << std::endl;
-			cb(buffer, start, end, userData);
+		if (callback != NULL) {
+			LOG("BREAKPOINT 2.3.callback.3")
+			callback(buffer, start, end, userData);
 		}
 	}
 	
 	void dataCallback(Callback cb, size_t &mark, std::string_view buffer, size_t i, size_t bufferLen,
 		bool clear, bool allowEmpty = false)
 	{
-		std::cout << "BREAKPOINT 2.3.1" << std::endl;
+		LOG("BREAKPOINT 2.3.1")
 		if (mark == UNMARKED) {
+			LOG("BREAKPOINT 2.3.1.1 UNMARKED")
 			return;
 		}
 		
-		std::cout << "BREAKPOINT 2.3.2" << std::endl;
+		LOG("BREAKPOINT 2.3.2")
 		if (!clear) {
-			std::cout << "BREAKPOINT 2.3.3" << std::endl;
+			LOG("BREAKPOINT 2.3.3")
 			callback(cb, buffer, mark, bufferLen, allowEmpty);
 			mark = 0;
 		} else {
-			std::cout << "BREAKPOINT 2.3.4" << std::endl;
+			LOG("BREAKPOINT 2.3.4")
 			callback(cb, buffer, mark, i, allowEmpty);
-			std::cout << "BREAKPOINT 2.3.4.1" << std::endl;
+			LOG("BREAKPOINT 2.3.4.1")
 			mark = UNMARKED;
-			std::cout << "BREAKPOINT 2.3.4.2" << std::endl;
+			LOG("BREAKPOINT 2.3.4.2")
 		}
 	}
 	
@@ -120,12 +129,12 @@ private:
 	void processPartData(size_t &prevIndex, size_t &index, std::string_view buffer,
 		size_t len, size_t boundaryEnd, size_t &i, char c, State &state, int &flags)
 	{
-		std::cout << "BREAK processPartData" << std::endl;
+		LOG("BREAK processPartData")
 		prevIndex = index;
 		
 		if (index == 0) {
 			// boyer-moore derived algorithm to safely skip non-boundary data
-			std::cout << "BREAK ppd 1" << std::endl;
+			LOG("BREAK ppd 1")
 			while (i + boundarySize <= len) {
 				if (isBoundaryChar(buffer[i + boundaryEnd])) {
 					break;
@@ -140,7 +149,7 @@ private:
 		}
 		
 		if (index < boundarySize) {
-			std::cout << "BREAK ppd 2" << std::endl;
+			LOG("BREAK ppd 2")
 			if (boundary[index] == c) {
 				if (index == 0) {
 					dataCallback(onPartData, partDataMark, buffer, i, len, true);
@@ -150,7 +159,7 @@ private:
 				index = 0;
 			}
 		} else if (index == boundarySize) {
-			std::cout << "BREAK ppd 3" << std::endl;
+			LOG("BREAK ppd 3")
 			index++;
 			if (c == CR) {
 				// CR = part boundary
@@ -162,7 +171,8 @@ private:
 				index = 0;
 			}
 		} else if (index - 1 == boundarySize) {
-			std::cout << "BREAK ppd 4" << std::endl;
+			LOG("BREAK ppd 4")
+			std::cout << "BREAK POINT " << std::endl;
 			if (flags & PART_BOUNDARY) {
 				index = 0;
 				if (c == LF) {
@@ -185,14 +195,14 @@ private:
 				index = 0;
 			}
 		} else if (index - 2 == boundarySize) {
-			std::cout << "BREAK ppd 5" << std::endl;
+			LOG("BREAK ppd 5")
 			if (c == CR) {
 				index++;
 			} else {
 				index = 0;
 			}
 		} else if (index - boundarySize == 3) {
-			std::cout << "BREAK ppd 6" << std::endl;
+			LOG("BREAK ppd 6")
 			index = 0;
 			if (c == LF) {
 				callback(onPartEnd);
@@ -203,7 +213,7 @@ private:
 		}
 		
 		if (index > 0) {
-			std::cout << "BREAK ppd 7" << std::endl;
+			LOG("BREAK ppd 7")
 			// when matching a possible boundary, keep a lookbehind reference
 			// in case it turns out to be a false lead
 			if (index - 1 >= lookbehindSize) {
@@ -215,11 +225,11 @@ private:
 					"Please send bug report with input file attached.");
 				throw std::out_of_range("index underflows lookbehind buffer");
 			}
-			std::cout << "BREAK ppd 7.1" << std::endl;
+			LOG("BREAK ppd 7.1")
 			lookbehind[index - 1] = c;
-			std::cout << "BREAK ppd 7.2" << std::endl;
+			LOG("BREAK ppd 7.2")
 		} else if (prevIndex > 0) {
-			std::cout << "BREAK ppd 8" << std::endl;
+			LOG("BREAK ppd 8")
 			// if our boundary turned out to be rubbish, the captured lookbehind
 			// belongs to partData
 			callback(onPartData, lookbehind, 0, prevIndex);
@@ -233,7 +243,9 @@ private:
 	}
 	
 public:
-	std::string boundary;
+
+
+	// Callbacks
 	Callback onPartBegin;
 	Callback onHeaderField;
 	Callback onHeaderValue;
@@ -242,18 +254,34 @@ public:
 	Callback onPartData;
 	Callback onPartEnd;
 	Callback onEnd;
+
+	// ??? shouldn't it be Callback instead of void*
 	void *userData;
+
+	std::string boundary;
+
+	// c string of boundary, why ? idk
 	const char *boundaryData;
+	// ... and its size
 	size_t boundarySize;
+
+	// useful for finding the boundary (using the Boyer-Moore algo)
 	bool boundaryIndex[256];
+
+	// when matching a possible boundary, keep a lookbehind reference
+	// in case it turns out to be a false lead
 	char *lookbehind;
 	size_t lookbehindSize;
-	State state;
-	int flags;
-	size_t index;
-	size_t headerFieldMark;
-	size_t headerValueMark;
-	size_t partDataMark;
+
+	State state; // to remember what data the parser is parsing (header, data...)
+	int flags; // to know if part or last boundary
+
+	size_t index; // position of current character on the line ?
+
+	size_t headerFieldMark; // start of header field name
+	size_t headerValueMark; // start of header value
+	size_t partDataMark; // start of part data
+
 	const char *errorReason;
 	
 	
@@ -329,7 +357,7 @@ public:
 
 	MultipartParser(MultipartParser&& old) {
 
-		std::cout << "move constructor" << std::endl;
+		LOG("move constructor")
 		onPartBegin = old.onPartBegin;
 		onHeaderField = old.onHeaderField;
 		onHeaderValue = old.onHeaderValue;
@@ -399,7 +427,7 @@ public:
 	}
 	*/
 	~MultipartParser() {
-		std::cout << "DESTROYED" << std::endl;
+		LOG("DESTROYED")
 		if ( lookbehind != nullptr ) {
 			delete[] lookbehind;
 			lookbehind = nullptr;
@@ -426,9 +454,9 @@ public:
 		reset();
 		//this->boundary = boundary;
 		this->boundary = "\r\n--" + boundary;
-		std::cout << this->boundary << "setboundary" << std::endl;
+		LOG(this->boundary << "setboundary")
 		boundaryData = this->boundary.c_str();
-		std::cout << this->boundary << "setboundary c_str" << std::endl;
+		LOG(this->boundary << "setboundary c_str")
 		boundarySize = this->boundary.size();
 		indexBoundary();
 		lookbehind = new char[boundarySize + 8];
@@ -437,29 +465,43 @@ public:
 		errorReason = "No error.";
 	}
 	
+	/** Process a small part (buffer) of the body of the request
+	 * @param buffer part of the HTTP multi-form body
+	 * @param len the length of the buffer
+	*/
 	size_t feed(std::string_view buffer, size_t len) {
+
 		if (state == ERROR || len == 0) {
 			return 0;
 		}
-		
+
 		State state         = this->state;
 		int flags           = this->flags;
 		size_t prevIndex    = this->index;
 		size_t index        = this->index;
-		size_t boundaryEnd  = boundarySize - 1;
+		size_t boundaryEnd  = boundarySize;
 		size_t i;
 		char c, cl;
-		std::cout << boundary << "feed" << std::endl;
+		LOG(boundary << "feed")
+		// go through each char of in the buffer
 		for (i = 0; i < len; i++) {
 			c = buffer[i];
 			
 			switch (state) {
+
 			case ERROR:
 				return i;
+
 			case START:
 				index = 0;
 				state = START_BOUNDARY;
+
 			case START_BOUNDARY:
+
+				// this->boundary has 2 more character (at the beginning CR LF)
+				// than what we are currently reading, so the index of the last
+				// char of the part boundary is not size-1 but size-3, and the
+				// char before the last: size-4
 				if (index == boundarySize - 4) {
 					if (c != CR) {
 						setError("Malformed. Expected CR after boundary.");
@@ -478,23 +520,23 @@ public:
 					break;
 				}
 				if (c != boundary[index + 2]) {
-					std::cout << "oijaeifj paoijepofgi japoeigjp aejpgoi japogiej aioejg  HERE" << std::endl;
-					std::cout << int(c) << " vs " << int(boundary[index+2]) << std::endl;
-					std::cout << c << " vs " << boundary[index+2] << std::endl;
+					LOG("oijaeifj paoijepofgi japoeigjp aejpgoi japogiej aioejg  HERE")
+					LOG(int(c) << " vs " << int(boundary[index+2]))
+					LOG(c << " vs " << boundary[index+2])
 					setError("Malformed. Found different boundary data than the given one.");
 					return i;
 				}
 				index++;
 				break;
 			case HEADER_FIELD_START:
-				std::cout << "BREAKPOINT 1" << std::endl;
+				LOG("BREAKPOINT 1")
 				state = HEADER_FIELD;
 				headerFieldMark = i;
 				index = 0;
 			case HEADER_FIELD:
-				std::cout << "BREAKPOINT 2" << std::endl;
+				LOG("BREAKPOINT 2")
 				if (c == CR) {
-					std::cout << "BREAKPOINT 2.1" << std::endl;
+					LOG("BREAKPOINT 2.1")
 					headerFieldMark = UNMARKED;
 					state = HEADERS_ALMOST_DONE;
 					break;
@@ -502,12 +544,12 @@ public:
 
 				index++;
 				if (c == HYPHEN) {
-					std::cout << "BREAKPOINT 2.2" << std::endl;
+					LOG("BREAKPOINT 2.2")
 					break;
 				}
 
 				if (c == COLON) {
-					std::cout << "BREAKPOINT 2.3" << std::endl;
+					LOG("BREAKPOINT 2.3")
 					if (index == 1) {
 						// empty header field
 						setError("Malformed first header name character.");
@@ -518,31 +560,32 @@ public:
 					break;
 				}
 
-				std::cout << "BREAKPOINT 3" << std::endl;
+				LOG("BREAKPOINT 3")
 				cl = lower(c);
 				if (cl < 'a' || cl > 'z') {
-					setError("Malformed header name.");
+					setError("Malformed header name.");;
 					return i;
 				}
 				break;
 			case HEADER_VALUE_START:
-				std::cout << "BREAKPOINT 4" << std::endl;
+				LOG("BREAKPOINT 4")
 				if (c == SPACE) {
 					break;
 				}
 				
-				headerValueMark = i;
+				headerValueMark = i; // mark start of header value in the buffer
 				state = HEADER_VALUE;
 			case HEADER_VALUE:
-				std::cout << "BREAKPOINT 5" << std::endl;
+				LOG("BREAKPOINT 5")
 				if (c == CR) {
+					//             callback   , start          , buffer,  end  , clean, allowEmpty
 					dataCallback(onHeaderValue, headerValueMark, buffer, i, len, true, true);
 					callback(onHeaderEnd);
 					state = HEADER_VALUE_ALMOST_DONE;
 				}
 				break;
 			case HEADER_VALUE_ALMOST_DONE:
-				std::cout << "BREAKPOINT 6" << std::endl;
+				LOG("BREAKPOINT 6")
 				if (c != LF) {
 					setError("Malformed header value: LF expected after CR");
 					return i;
@@ -551,7 +594,7 @@ public:
 				state = HEADER_FIELD_START;
 				break;
 			case HEADERS_ALMOST_DONE:
-				std::cout << "BREAKPOINT 7" << std::endl;
+				LOG("BREAKPOINT 7")
 				if (c != LF) {
 					setError("Malformed header ending: LF expected after CR");
 					return i;
@@ -561,11 +604,13 @@ public:
 				state = PART_DATA_START;
 				break;
 			case PART_DATA_START:
-				std::cout << "BREAKPOINT 8" << std::endl;
+				LOG("BREAKPOINT 8")
 				state = PART_DATA;
 				partDataMark = i;
 			case PART_DATA:
-				std::cout << "BREAKPOINT 9" << std::endl;
+				LOG("BREAKPOINT 9")
+				// part data requires more processing
+				// will modify i, index, prevIndex, state and flags
 				processPartData(prevIndex, index, buffer, len, boundaryEnd, i, c, state, flags);
 				break;
 			default:
@@ -573,11 +618,11 @@ public:
 			}
 		}
 		
-		std::cout << "BREAKPOINT 10" << std::endl;
+		LOG("BREAKPOINT 10")
 		dataCallback(onHeaderField, headerFieldMark, buffer, i, len, false);
-		std::cout << "BREAKPOINT 11" << std::endl;
+		LOG("BREAKPOINT 11")
 		dataCallback(onHeaderValue, headerValueMark, buffer, i, len, false);
-		std::cout << "BREAKPOINT 12" << std::endl;
+		LOG("BREAKPOINT 12")
 		dataCallback(onPartData, partDataMark, buffer, i, len, false);
 		
 		this->index = index;
